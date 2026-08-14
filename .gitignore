@@ -1,0 +1,26 @@
+# macOS
+.DS_Store
+build/
+/shotsync
+*.log
+
+# Go
+mac/vendor/
+
+# Android
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.idea/
+android/*.iml
+android/captures/
+android/.kotlin/
+
+# Required source package. This explicit exception protects against broad
+# user-level ignore rules such as a global `data` pattern.
+!android/app/src/main/java/com/shotsync/app/data/
+!android/app/src/main/java/com/shotsync/app/data/**
+
+# General
+*.tmp

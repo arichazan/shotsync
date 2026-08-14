@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ShotSync</string>
+    <string name="notif_channel_monitoring">Monitoring</string>
+    <string name="notif_channel_monitoring_desc">Persistent indicator that ShotSync is watching for screenshots</string>
+    <string name="notif_channel_transfers">Transfers</string>
+    <string name="notif_channel_transfers_desc">Upload progress and completion notices</string>
+    <string name="notif_monitoring_title">Shot Sync is monitoring for screenshots</string>
+    <string name="notif_monitoring_text">Screenshots will be sent to your Mac automatically</string>
+    <string name="notif_uploading_title">Sending screenshot</string>
+    <string name="notif_complete_title">Screenshot sent</string>
+</resources>
