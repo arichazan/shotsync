@@ -7,7 +7,11 @@ echo "==> Go unit tests"
 (cd mac && go vet ./... && go test ./...)
 
 echo "==> Android unit tests"
-(cd android && ./gradlew :app:testDebugUnitTest --console=plain -q)
+if [ -n "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}" ] || [ -f android/local.properties ]; then
+  (cd android && ./gradlew :app:testDebugUnitTest --console=plain -q)
+else
+  echo "SKIP: no Android SDK (set ANDROID_HOME or android/local.properties); CI runs these"
+fi
 
 echo "==> Integration test (isolated receiver)"
 ./scripts/integration_test.sh

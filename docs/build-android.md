@@ -32,10 +32,15 @@ The APK is self-signed with the default debug key. For distribution or
 long-term use, build a release APK and sign it with your own key:
 
 ```bash
-cd android
-./gradlew :app:assembleRelease
-# configure signingConfigs in app/build.gradle.kts for your keystore
+export SHOTSYNC_KEYSTORE_PATH=/secure/path/shotsync-upload.jks
+export SHOTSYNC_KEYSTORE_PASSWORD=... SHOTSYNC_KEY_ALIAS=upload SHOTSYNC_KEY_PASSWORD=...
+cd android && ./gradlew :app:bundleRelease   # AAB for Play; assembleRelease for an APK
 ```
+
+Without these variables the release build is produced **unsigned**. CI
+(`.github/workflows/android.yml`) reads the same values from the repository
+secrets `SHOTSYNC_KEYSTORE_BASE64` (base64 of the .jks),
+`SHOTSYNC_KEYSTORE_PASSWORD`, `SHOTSYNC_KEY_ALIAS` and `SHOTSYNC_KEY_PASSWORD`.
 
 ## Tests
 
