@@ -118,7 +118,7 @@ fun SetupScreen(vm: AppViewModel, onDone: () -> Unit) {
             ),
             SetupStep(
                 "Battery optimization",
-                "Exclude ShotSync so monitoring is not killed in the background.",
+                "Exclude ShotSync so monitoring is not killed in the background: in the list, pick ShotSync and choose \"Don't optimize\" (or \"Unrestricted\").",
                 vm.isBatteryOptimizationExempt,
             ),
             SetupStep(
@@ -192,6 +192,15 @@ fun SetupScreen(vm: AppViewModel, onDone: () -> Unit) {
                     TextButton(onClick = { step++ }, modifier = Modifier.fillMaxWidth()) {
                         Text("Continue")
                     }
+                }
+                if (!vm.hasFullMediaPermission) {
+                    // Android 14+ "Select photos" or a permanent denial: the
+                    // system dialog may not offer full access again, so let
+                    // the user switch to "Allow all" in app settings.
+                    TextButton(
+                        onClick = { runCatching { context.startActivity(vm.appSettingsIntent()) } },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text("Open app settings (choose \"Allow all\")") }
                 }
             }
 
