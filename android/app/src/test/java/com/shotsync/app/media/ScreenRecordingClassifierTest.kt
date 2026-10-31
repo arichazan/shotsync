@@ -55,4 +55,36 @@ class ScreenRecordingClassifierTest {
     fun `custom recording folders extend detection`() {
         assertTrue(isRec("Movies/MyCasts", "anything.mp4", custom = setOf("Movies/MyCasts")))
     }
+
+    @Test
+    fun `trailing slash and casing in relative path match`() {
+        assertTrue(isRec("Movies/Screen records/", "20260814.mp4"))
+        assertTrue(isRec("MOVIES/SCREENRECORDER/", "20260814.mp4"))
+    }
+
+    @Test
+    fun `oem folder variants match by containment`() {
+        assertTrue(isRec("Movies/Screen records 1", "clip.mp4"))
+        assertTrue(isRec("DCIM/ScreenRecords/2026", "clip.mp4"))
+        assertTrue(isRec("Movies/Screencasts/Old", "clip.webm"))
+    }
+
+    @Test
+    fun `camera and messaging videos with screen-free names are rejected`() {
+        assertFalse(isRec("DCIM/Camera", "PXL_20260814_094521321.mp4"))
+        assertFalse(isRec("Movies/Telegram", "video_2026-08-14.mp4"))
+        assertFalse(isRec(null, "VID_1.mp4"))
+    }
+
+    @Test
+    fun `custom folder matching ignores case and slashes`() {
+        assertTrue(isRec("movies/mycasts/", "a.mp4", custom = setOf("/Movies/MyCasts")))
+    }
+
+    @Test
+    fun `observed folders include defaults and custom`() {
+        val folders = ScreenRecordingClassifier.observedFolders(setOf("Movies/MyCasts"))
+        assertTrue(folders.containsAll(ScreenRecordingClassifier.KNOWN_FOLDERS))
+        assertTrue("Movies/MyCasts" in folders)
+    }
 }

@@ -65,4 +65,36 @@ class ScreenshotClassifierTest {
         assertEquals("pictures/screenshots", ScreenshotClassifier.normalizePath("/Pictures/Screenshots/"))
         assertEquals("dcim/camera", ScreenshotClassifier.normalizePath("  DCIM/Camera "))
     }
+
+    @Test
+    fun `mediastore relative paths with trailing slash match`() {
+        assertTrue(isShot("Pictures/Screenshots/", "20260814_094521.png"))
+        assertTrue(isShot("DCIM/Screenshots/", "20260814_094521.jpg"))
+    }
+
+    @Test
+    fun `custom folder matching ignores case and slashes`() {
+        assertTrue(isShot("pictures/myshots/", "IMG_0001.png", custom = setOf("/Pictures/MyShots")))
+        assertFalse(isShot("Pictures/MyShots/Sub", "IMG_0001.png", custom = setOf("Pictures/MyShots")))
+    }
+
+    @Test
+    fun `blank path falls back to filename`() {
+        assertTrue(isShot("   ", "Screenshot_1.png"))
+        assertFalse(isShot("", "IMG_1.png"))
+        assertFalse(isShot(null, ""))
+    }
+
+    @Test
+    fun `filename markers are case insensitive`() {
+        assertTrue(isShot("Download", "SCREENSHOT_2026.PNG"))
+        assertTrue(isShot("Download", "Screen-Shot 2026.png"))
+    }
+
+    @Test
+    fun `observed folders include defaults and custom`() {
+        val folders = ScreenshotClassifier.observedFolders(setOf("Pictures/MyShots"))
+        assertTrue(folders.containsAll(ScreenshotClassifier.KNOWN_FOLDERS))
+        assertTrue("Pictures/MyShots" in folders)
+    }
 }
