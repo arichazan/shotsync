@@ -110,6 +110,7 @@ func Uninstall(keepData bool) error {
 	_ = exec.Command("launchctl", "bootout", "gui/"+uid(), p.Plist).Run()
 	_ = os.Remove(p.Plist)
 	_ = os.Remove(p.Bin)
+	_ = DisableLoginItem()
 	if !keepData {
 		home, _ := os.UserHomeDir()
 		_ = os.RemoveAll(filepath.Join(home, "Library", "Application Support", "ShotSync"))

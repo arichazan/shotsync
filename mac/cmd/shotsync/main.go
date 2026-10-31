@@ -9,6 +9,8 @@
 //	devices                   list paired Android devices
 //	unpair <device-id>        revoke a device token and unpair
 //	menu                      run the menu-bar status app
+//	login-item enable|disable|status
+//	                          opt-in: open the menu-bar app at login
 //	version                   print version
 package main
 
@@ -54,6 +56,10 @@ func main() {
 	args := os.Args[1:]
 	if len(args) == 0 {
 		args = []string{"serve"}
+		// Launched as ShotSync.app (Finder, Dock, login item): show the menu.
+		if exe, err := os.Executable(); err == nil && install.InAppBundle(exe) {
+			args = []string{"menu"}
+		}
 	}
 	cmd, rest := args[0], args[1:]
 	switch cmd {
@@ -100,6 +106,8 @@ func main() {
 		cmdUnpair(rest[0])
 	case "menu":
 		runMenu()
+	case "login-item":
+		cmdLoginItem(rest)
 	case "version":
 		fmt.Println("shotsync " + version)
 	case "help", "-h", "--help":
@@ -127,6 +135,8 @@ Usage:
   shotsync devices            List paired Android devices
   shotsync unpair <id>        Revoke a device token and unpair
   shotsync menu               Run the menu-bar status app
+  shotsync login-item enable|disable|status
+                              Opt in/out of opening the menu-bar app at login
   shotsync version            Print the version
 `)
 }
@@ -473,3 +483,48 @@ func writeQRFile(payload *qrPayload) (string, error) {
 }
 
 var _ = io.Discard
+
+// --- login item ---
+
+func cmdLoginItem(rest []string) {
+	if len(rest) != 1 {
+		fatal(fmt.Errorf("usage: shotsync login-item enable|disable|status"))
+	}
+	switch rest[0] {
+	case "enable":
+		exe, err := menuExecutable()
+		if err != nil {
+			fatal(err)
+		}
+		if err := install.EnableLoginItem(exe); err != nil {
+			fatal(err)
+		}
+		fmt.Println("menu-bar app will open at login (" + exe + " menu)")
+	case "disable":
+		if err := install.DisableLoginItem(); err != nil {
+			fatal(err)
+		}
+		fmt.Println("menu-bar login item removed")
+	case "status":
+		if install.LoginItemEnabled() {
+			fmt.Println("enabled")
+		} else {
+			fmt.Println("disabled")
+		}
+	default:
+		fatal(fmt.Errorf("usage: shotsync login-item enable|disable|status"))
+	}
+}
+
+// menuExecutable returns the absolute, symlink-resolved path of the running
+// binary, which the login item launches with the "menu" argument.
+func menuExecutable() (string, error) {
+	exe, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+	if r, err := filepath.EvalSymlinks(exe); err == nil {
+		exe = r
+	}
+	return filepath.Abs(exe)
+}

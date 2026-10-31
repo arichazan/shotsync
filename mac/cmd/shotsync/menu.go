@@ -68,6 +68,8 @@ func onReady() {
 	advancedItem := settingsItem.AddSubMenuItem("Edit Advanced Configuration…", "Open the receiver configuration file")
 	logsItem := systray.AddMenuItem("View Logs", "")
 	systray.AddSeparator()
+	loginItem := systray.AddMenuItemCheckbox("Open Menu at Login", "Show this menu-bar app when you log in", install.LoginItemEnabled())
+	systray.AddSeparator()
 	quitItem := systray.AddMenuItem("Quit ShotSync", "")
 
 	cfg, _ := config.Load()
@@ -195,6 +197,21 @@ func onReady() {
 				continue
 			}
 			_ = exec.Command("open", "-e", p.Log).Start()
+		}
+	}()
+
+	go func() {
+		for range loginItem.ClickedCh {
+			if loginItem.Checked() {
+				if install.DisableLoginItem() == nil {
+					loginItem.Uncheck()
+				}
+				continue
+			}
+			exe, err := menuExecutable()
+			if err == nil && install.EnableLoginItem(exe) == nil {
+				loginItem.Check()
+			}
 		}
 	}()
 

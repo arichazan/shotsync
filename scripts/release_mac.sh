@@ -16,7 +16,11 @@
 #     or, instead of a profile (CI):
 #   MACOS_NOTARY_APPLE_ID, MACOS_NOTARY_TEAM_ID, MACOS_NOTARY_PASSWORD (app-specific password)
 #
-# Output: dist/shotsync-<version>-darwin-universal.tar.gz (+ .sha256)
+# Output:
+#   dist/shotsync-<version>-darwin-universal.tar.gz (+ .sha256)
+#       shotsync-<version>/shotsync      CLI receiver (Homebrew installs this)
+#       shotsync-<version>/ShotSync.app  menu-bar app (LSUIElement) wrapping `shotsync menu`
+#   dist/ShotSync-<version>.app.zip (+ .sha256)  the app alone, for drag-to-Applications
 set -euo pipefail
 cd "$(dirname "$0")/.."
 ROOT=$(pwd)
@@ -50,34 +54,62 @@ rm -f "$DIST/shotsync-arm64" "$DIST/shotsync-amd64"
 lipo -info "$STAGE/shotsync"
 "$STAGE/shotsync" version
 
+echo "==> ShotSync.app bundle"
+APP="$STAGE/ShotSync.app"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+cp "$STAGE/shotsync" "$APP/Contents/MacOS/shotsync"
+ICONSET="$DIST/ShotSync.iconset"
+rm -rf "$ICONSET"
+(cd mac && go run ./cmd/mkicon "$ICONSET")
+iconutil -c icns -o "$APP/Contents/Resources/ShotSync.icns" "$ICONSET"
+rm -rf "$ICONSET"
+sed -e "s/__VERSION__/$VERSION/g" -e "s/__MIN_MACOS__/$MACOSX_DEPLOYMENT_TARGET/g" \
+  mac/packaging/Info.plist > "$APP/Contents/Info.plist"
+plutil -lint "$APP/Contents/Info.plist"
+[ "$(/usr/libexec/PlistBuddy -c 'Print :LSUIElement' "$APP/Contents/Info.plist")" = "true" ]
+printf 'APPL????' > "$APP/Contents/PkgInfo"
+
 if [ -n "${MACOS_SIGN_IDENTITY:-}" ]; then
   echo "==> codesign (hardened runtime, secure timestamp)"
   codesign --force --options runtime --timestamp \
     --identifier com.shotsync.receiver \
     --sign "$MACOS_SIGN_IDENTITY" "$STAGE/shotsync"
   codesign --verify --strict --verbose=2 "$STAGE/shotsync"
+  codesign --force --options runtime --timestamp \
+    --sign "$MACOS_SIGN_IDENTITY" "$APP"
+  codesign --verify --deep --strict --verbose=2 "$APP"
 else
-  echo "==> MACOS_SIGN_IDENTITY not set: skipping codesign (binary is ad-hoc signed by the linker)"
+  echo "==> MACOS_SIGN_IDENTITY not set: skipping codesign (ad-hoc signing the app bundle)"
+  codesign --force --sign - "$APP"
 fi
 
 cp LICENSE README.md "$STAGE/"
-TARBALL="$DIST/shotsync-$VERSION-darwin-universal.tar.gz"
-(cd "$DIST" && tar -czf "$TARBALL" "shotsync-$VERSION")
+APPZIP="$DIST/ShotSync-$VERSION.app.zip"
 
 if [ -n "${MACOS_SIGN_IDENTITY:-}" ] && { [ -n "${MACOS_NOTARY_PROFILE:-}" ] || [ -n "${MACOS_NOTARY_APPLE_ID:-}" ]; }; then
-  echo "==> notarizing (bare binaries cannot be stapled; Gatekeeper checks online)"
+  echo "==> notarizing CLI + app (the app is stapled; a bare binary cannot be)"
   ZIP="$DIST/notarize-$VERSION.zip"
-  ditto -c -k --keepParent "$STAGE/shotsync" "$ZIP"
+  NSTAGE="$DIST/notarize-$VERSION"
+  rm -rf "$NSTAGE" && mkdir -p "$NSTAGE"
+  cp "$STAGE/shotsync" "$NSTAGE/"
+  ditto "$APP" "$NSTAGE/ShotSync.app"
+  ditto -c -k --keepParent "$NSTAGE" "$ZIP"
   if [ -n "${MACOS_NOTARY_PROFILE:-}" ]; then
     xcrun notarytool submit "$ZIP" --keychain-profile "$MACOS_NOTARY_PROFILE" --wait
   else
     xcrun notarytool submit "$ZIP" --apple-id "$MACOS_NOTARY_APPLE_ID" \
       --team-id "$MACOS_NOTARY_TEAM_ID" --password "$MACOS_NOTARY_PASSWORD" --wait
   fi
-  rm -f "$ZIP"
+  xcrun stapler staple "$APP"
+  rm -rf "$ZIP" "$NSTAGE"
 else
   echo "==> notarization skipped (needs MACOS_SIGN_IDENTITY + notary credentials)"
 fi
 
+TARBALL="$DIST/shotsync-$VERSION-darwin-universal.tar.gz"
+(cd "$DIST" && tar -czf "$TARBALL" "shotsync-$VERSION")
+(cd "$STAGE" && ditto -c -k --keepParent ShotSync.app "$APPZIP")
+
 shasum -a 256 "$TARBALL" | tee "$TARBALL.sha256"
-echo "Release artifact: $TARBALL"
+shasum -a 256 "$APPZIP" | tee "$APPZIP.sha256"
+echo "Release artifacts: $TARBALL, $APPZIP"
