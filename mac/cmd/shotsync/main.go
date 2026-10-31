@@ -30,15 +30,15 @@ import (
 	"syscall"
 	"time"
 
-	"example.com/shotsync/mac/internal/bonjour"
-	"example.com/shotsync/mac/internal/config"
-	"example.com/shotsync/mac/internal/identity"
-	"example.com/shotsync/mac/internal/install"
-	"example.com/shotsync/mac/internal/keychain"
-	"example.com/shotsync/mac/internal/notify"
-	"example.com/shotsync/mac/internal/qr"
-	"example.com/shotsync/mac/internal/server"
-	"example.com/shotsync/mac/internal/store"
+	"github.com/arichazan/shotsync/mac/internal/bonjour"
+	"github.com/arichazan/shotsync/mac/internal/config"
+	"github.com/arichazan/shotsync/mac/internal/identity"
+	"github.com/arichazan/shotsync/mac/internal/install"
+	"github.com/arichazan/shotsync/mac/internal/keychain"
+	"github.com/arichazan/shotsync/mac/internal/notify"
+	"github.com/arichazan/shotsync/mac/internal/qr"
+	"github.com/arichazan/shotsync/mac/internal/server"
+	"github.com/arichazan/shotsync/mac/internal/store"
 )
 
 // version is overridden at release time via -ldflags "-X main.version=...".

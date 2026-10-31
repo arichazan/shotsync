@@ -16,8 +16,8 @@ import (
 	"strings"
 	"time"
 
-	"example.com/shotsync/mac/internal/config"
-	"example.com/shotsync/mac/internal/install"
+	"github.com/arichazan/shotsync/mac/internal/config"
+	"github.com/arichazan/shotsync/mac/internal/install"
 	"fyne.io/systray"
 )
 

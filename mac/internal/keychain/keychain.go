@@ -13,7 +13,7 @@ import (
 	"strings"
 	"sync"
 
-	"example.com/shotsync/mac/internal/config"
+	"github.com/arichazan/shotsync/mac/internal/config"
 )
 
 const service = "com.shotsync.receiver"
