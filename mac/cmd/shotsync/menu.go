@@ -16,9 +16,9 @@ import (
 	"strings"
 	"time"
 
+	"fyne.io/systray"
 	"github.com/arichazan/shotsync/mac/internal/config"
 	"github.com/arichazan/shotsync/mac/internal/install"
-	"fyne.io/systray"
 )
 
 type statusInfo struct {

@@ -37,9 +37,16 @@ secure timestamp, both required for notarization) and identifier
 use JIT, unsigned memory or the camera/microphone. Network server access does
 not require an entitlement outside the App Sandbox.
 
-Keychain note: device tokens are stored with `security` under service
-`com.shotsync.receiver`. After switching from an unsigned to a signed binary
-macOS may ask once for Keychain access; choose "Always Allow".
+Keychain note: device tokens are stored as generic passwords under service
+`com.shotsync.receiver` through the Security framework (`SecItemAdd` /
+`SecItemUpdate` / `SecItemCopyMatching` / `SecItemDelete`), so a token never
+appears on a command line. Items are owned by the binary that wrote them.
+Items written by older builds (which used the `security` CLI), or by an
+earlier unsigned build, are read once through `security find-generic-password`
+(the secret travels only over its stdout pipe) and re-written by the current
+binary. A signed release keeps access across upgrades because its designated
+requirement stays the same. If macOS still asks for Keychain access, choose
+"Always Allow".
 
 ## 3. Notarize
 

@@ -55,7 +55,7 @@
 |---|---|
 | `internal/server` | TLS server, auth, pairing, uploads, rate limit, admin endpoints |
 | `internal/store` | JSON state: devices, transfer history (dedupe) |
-| `internal/keychain` | Token storage via the `security` CLI |
+| `internal/keychain` | Token storage: Security framework via cgo on macOS (`SecItem*`), 0600 file fallback elsewhere |
 | `internal/identity` | Device ID + self-signed CA/leaf generation |
 | `internal/bonjour` | Minimal mDNS responder (x/net/dns/dnsmessage) |
 | `internal/install` | launchd agent management |
