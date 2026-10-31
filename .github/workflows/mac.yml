@@ -1,0 +1,45 @@
+name: mac-receiver
+
+on:
+  push:
+    branches: [production-ready, main]
+    paths: ["mac/**", "scripts/**", "homebrew/**", ".github/workflows/mac.yml"]
+  pull_request:
+    paths: ["mac/**", "scripts/**", "homebrew/**", ".github/workflows/mac.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: mac/go.mod
+          cache-dependency-path: mac/go.sum
+      - name: vet + test
+        working-directory: mac
+        run: go vet ./... && go test -race -count=1 ./...
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: mac/go.mod
+          cache-dependency-path: mac/go.sum
+      - name: vet + test (darwin)
+        working-directory: mac
+        run: go vet ./... && go test -count=1 ./...
+      - name: integration test
+        run: ./scripts/integration_test.sh
+      - name: universal release build (unsigned; see docs/release-mac.md)
+        run: ./scripts/release_mac.sh 0.0.0-ci
+      - uses: actions/upload-artifact@v5
+        with:
+          name: shotsync-darwin-universal
+          path: dist/*.tar.gz*

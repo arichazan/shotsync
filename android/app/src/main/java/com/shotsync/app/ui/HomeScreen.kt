@@ -78,6 +78,35 @@ fun HomeScreen(
             }
         }
 
+        if (!vm.hasMediaPermission && engineState.paired) {
+            item {
+                val context = androidx.compose.ui.platform.LocalContext.current
+                Card(
+                    Modifier.padding(horizontal = 16.dp),
+                    colors = androidx.compose.material3.CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                    ),
+                ) {
+                    Row(
+                        Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            if (vm.hasPartialPhotoAccess)
+                                "Only selected photos are shared with ShotSync — new screenshots won't sync. Choose \"Allow all\"."
+                            else
+                                "Photo access is missing — screenshots won't sync.",
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        Button(onClick = {
+                            runCatching { context.startActivity(vm.appSettingsIntent()) }
+                        }) { Text("Fix") }
+                    }
+                }
+            }
+        }
+
         if (!vm.hasVideoPermission && engineState.paired) {
             item {
                 Card(

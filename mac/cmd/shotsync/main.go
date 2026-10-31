@@ -41,7 +41,8 @@ import (
 	"example.com/shotsync/mac/internal/store"
 )
 
-const version = "0.1.0"
+// version is overridden at release time via -ldflags "-X main.version=...".
+var version = "0.1.0"
 
 type tokenStore struct{}
 

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    No cleartext traffic anywhere, and only system CAs for any connection that
+    uses the platform default trust manager (user-installed CAs are NOT
+    trusted, so a proxy CA on the device cannot intercept traffic).
+
+    The Mac receiver's self-signed certificate is deliberately NOT listed here:
+    its fingerprint is per-installation and only known after QR pairing, so it
+    cannot be baked into a static <pin-set>. ApiClient instead installs a
+    PinningTrustManager that accepts exactly the paired certificate's SHA-256
+    fingerprint and nothing else (see sync/PinnedTrust.kt). OkHttp also
+    honours cleartextTrafficPermitted="false" below.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

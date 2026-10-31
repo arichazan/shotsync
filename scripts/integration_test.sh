@@ -22,6 +22,9 @@ sleep 1
 
 BASE="https://127.0.0.1:$PORT"
 
+# uuidgen is not installed on every Linux image.
+newid() { uuidgen 2>/dev/null || python3 -c "import uuid;print(uuid.uuid4())"; }
+
 check() { # name actual expected
   if [ "$2" = "$3" ]; then echo "PASS: $1"; else echo "FAIL: $1 (got '$2', want '$3')"; exit 1; fi
 }
@@ -55,7 +58,7 @@ upload() { # file -> response body
   local f="$1"; local name="$2"; local h; h=$(shasum -a 256 "$f" | cut -d' ' -f1)
   curl -sk -X POST "$BASE/api/v1/screenshots" \
     -H "Authorization: Bearer $TOKEN" -H "X-ShotSync-Device-ID: e2e-0001" \
-    -H "X-ShotSync-File-ID: e2e-$(uuidgen)" -H "X-ShotSync-SHA256: $h" \
+    -H "X-ShotSync-File-ID: e2e-$(newid)" -H "X-ShotSync-SHA256: $h" \
     -H "X-ShotSync-Filename: $name" -H "Content-Type: image/png" --data-binary @"$f"
 }
 
@@ -70,14 +73,14 @@ echo "$BODY" | grep -q '"status":"already_exists"' && echo "PASS: already_exists
 echo "==> hash mismatch rejected"
 CODE=$(curl -sk -o /dev/null -w "%{http_code}" -X POST "$BASE/api/v1/screenshots" \
   -H "Authorization: Bearer $TOKEN" -H "X-ShotSync-Device-ID: e2e-0001" \
-  -H "X-ShotSync-File-ID: e2e-$(uuidgen)" -H "X-ShotSync-SHA256: $(printf '0%.0s' {1..64})" \
+  -H "X-ShotSync-File-ID: e2e-$(newid)" -H "X-ShotSync-SHA256: $(printf '0%.0s' {1..64})" \
   -H "X-ShotSync-Filename: bad.png" -H "Content-Type: image/png" --data-binary @"$WORK/a.png")
 check "hash mismatch -> 400" "$CODE" "400"
 
 echo "==> wrong media type rejected"
 CODE=$(curl -sk -o /dev/null -w "%{http_code}" -X POST "$BASE/api/v1/screenshots" \
   -H "Authorization: Bearer $TOKEN" -H "X-ShotSync-Device-ID: e2e-0001" \
-  -H "X-ShotSync-File-ID: e2e-$(uuidgen)" -H "X-ShotSync-SHA256: $(printf '0%.0s' {1..64})" \
+  -H "X-ShotSync-File-ID: e2e-$(newid)" -H "X-ShotSync-SHA256: $(printf '0%.0s' {1..64})" \
   -H "X-ShotSync-Filename: evil.sh" -H "Content-Type: text/plain" --data-binary @"$WORK/a.png")
 check "text/plain -> 415" "$CODE" "415"
 
@@ -86,7 +89,7 @@ curl -sk -o /dev/null -X DELETE "$BASE/api/v1/device/e2e-0001" \
   -H "Authorization: Bearer $TOKEN" -H "X-ShotSync-Device-ID: e2e-0001"
 CODE=$(curl -sk -o /dev/null -w "%{http_code}" -X POST "$BASE/api/v1/screenshots" \
   -H "Authorization: Bearer $TOKEN" -H "X-ShotSync-Device-ID: e2e-0001" \
-  -H "X-ShotSync-File-ID: e2e-$(uuidgen)" -H "X-ShotSync-SHA256: $(printf '0%.0s' {1..64})" \
+  -H "X-ShotSync-File-ID: e2e-$(newid)" -H "X-ShotSync-SHA256: $(printf '0%.0s' {1..64})" \
   -H "X-ShotSync-Filename: bad.png" -H "Content-Type: image/png" --data-binary @"$WORK/a.png")
 check "revoked token -> 401" "$CODE" "401"
 

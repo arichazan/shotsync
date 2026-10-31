@@ -7,9 +7,12 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
+import android.os.Build
 import android.os.IBinder
 import android.provider.MediaStore
 import androidx.core.app.NotificationCompat
+import androidx.core.app.ServiceCompat
 import com.shotsync.app.MainActivity
 import com.shotsync.app.R
 import com.shotsync.app.ShotSyncApp
@@ -35,14 +38,31 @@ class MonitorService : Service() {
     private var imageObserver: ScreenshotObserver? = null
     private var videoObserver: ScreenshotObserver? = null
     private var networkMonitor: NetworkMonitor? = null
+    private var foregroundStarted = false
 
     override fun onCreate() {
         super.onCreate()
         createChannels()
-        startForeground(NOTIF_ID_MONITORING, buildMonitoringNotification())
+        // Declare the type explicitly (required semantics on Android 14+).
+        // If the system refuses the start (e.g. background-start
+        // restrictions), stop cleanly instead of crashing the process;
+        // the periodic reconciliation worker keeps syncing meanwhile.
+        try {
+            ServiceCompat.startForeground(
+                this,
+                NOTIF_ID_MONITORING,
+                buildMonitoringNotification(),
+                if (Build.VERSION.SDK_INT >= 34) ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE else 0,
+            )
+            foregroundStarted = true
+        } catch (e: Exception) {
+            AppLogger.w("Monitor", "startForeground refused: ${e.message}")
+            stopSelf()
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (!foregroundStarted) return START_NOT_STICKY
         val app = ShotSyncApp.from(this)
         val engine = app.engine
 
@@ -138,7 +158,14 @@ class MonitorService : Service() {
 
         fun start(context: Context) {
             val intent = Intent(context, MonitorService::class.java)
-            context.startForegroundService(intent)
+            try {
+                context.startForegroundService(intent)
+            } catch (e: Exception) {
+                // ForegroundServiceStartNotAllowedException (API 31+) when
+                // called outside an allowed window. Monitoring resumes the
+                // next time the app is opened.
+                AppLogger.w("Monitor", "foreground start not allowed: ${e.message}")
+            }
         }
 
         fun stop(context: Context) {

@@ -12,6 +12,13 @@ import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.Modifier
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.core.content.ContextCompat
@@ -37,11 +44,21 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // targetSdk 35+ enforces edge-to-edge; keep content out of the
+        // status/navigation bars and display cutouts.
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent {
             com.shotsync.app.ui.theme.ShotSyncTheme {
                 val vm: AppViewModel = viewModel { AppViewModel(this@MainActivity) }
-                com.shotsync.app.ui.AppRoot(vm)
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background)
+                        .safeDrawingPadding()
+                ) {
+                    com.shotsync.app.ui.AppRoot(vm)
+                }
             }
         }
     }
@@ -229,9 +246,21 @@ class AppViewModel(context: Context) : ViewModel() {
         AppLogger.writeExportedTo(uri, app)
     }
 
+    /**
+     * Opens the system battery-optimization list, where the user picks
+     * ShotSync -> "Don't optimize". The direct-request dialog
+     * (REQUEST_IGNORE_BATTERY_OPTIMIZATIONS) is deliberately not used: Play
+     * restricts that permission and the foreground service already keeps
+     * monitoring alive under Doze.
+     */
     fun batteryOptimizationIntent(): Intent =
-        Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+        Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+
+    /** App info screen: permissions (e.g. upgrade partial photo access) and battery usage. */
+    fun appSettingsIntent(): Intent =
+        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
             data = Uri.parse("package:${app.packageName}")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
 
     companion object {

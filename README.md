@@ -97,3 +97,11 @@ rejects unauthenticated, oversized, or non-media uploads.
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+## Releases, privacy and store
+
+- macOS universal release + signing/notarization: `docs/release-mac.md`,
+  `scripts/release_mac.sh`, Homebrew template `homebrew/shotsync.rb`
+- Privacy policy: [`PRIVACY.md`](PRIVACY.md)
+- Google Play material: `docs/play-store/`
+- Status and owner to-dos: [`PRODUCTION_READINESS.md`](PRODUCTION_READINESS.md)

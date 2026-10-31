@@ -13,12 +13,32 @@ android {
         applicationId = "com.shotsync.app"
         minSdk = 29
         targetSdk = 36
-        versionCode = 1
+        versionCode = (System.getenv("SHOTSYNC_VERSION_CODE") ?: "1").toInt()
         versionName = "0.1.0"
+    }
+
+    // Release signing is read from the environment (CI secrets) and skipped
+    // when absent, so assembleRelease still works and produces an unsigned APK.
+    //   SHOTSYNC_KEYSTORE_PATH, SHOTSYNC_KEYSTORE_PASSWORD,
+    //   SHOTSYNC_KEY_ALIAS, SHOTSYNC_KEY_PASSWORD
+    val releaseKeystore = System.getenv("SHOTSYNC_KEYSTORE_PATH")?.takeIf { it.isNotBlank() }
+        ?.let { file(it) }?.takeIf { it.exists() }
+    signingConfigs {
+        if (releaseKeystore != null) {
+            create("release") {
+                storeFile = releaseKeystore
+                storePassword = System.getenv("SHOTSYNC_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("SHOTSYNC_KEY_ALIAS")
+                keyPassword = System.getenv("SHOTSYNC_KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
         release {
+            if (releaseKeystore != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(

@@ -29,6 +29,11 @@ background. ShotSync restarts monitoring in three foreground-allowed ways:
 - Android 13+ (`READ_MEDIA_IMAGES` + `READ_MEDIA_VIDEO`), Android 10–12
   (`READ_EXTERNAL_STORAGE`): scoped MediaStore reads only. The app never
   requests `MANAGE_EXTERNAL_STORAGE` or broad legacy storage.
+- Android 14+ partial access ("Select photos"): the app declares
+  `READ_MEDIA_VISUAL_USER_SELECTED`, so a partial choice is reported as
+  partial (instead of a temporary full grant that is revoked when the app
+  goes to the background). Setup and the Home screen detect it and send the
+  user to app settings to choose "Allow all".
 - Screenshots are identified by `RELATIVE_PATH` (primarily
   `Pictures/Screenshots`, plus manufacturer variants and user-selected
   folders) with a filename fallback (`Screenshot…`).
@@ -45,9 +50,13 @@ background. ShotSync restarts monitoring in three foreground-allowed ways:
 
 ## Background execution
 
-- **Battery optimization**: first-run setup asks the user to exclude
-  ShotSync (`ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`). Without it,
-  manufacturers may kill the process while the screen is off.
+- **Battery optimization**: first-run setup opens the system battery
+  optimization list (`ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS`) so the
+  user can pick ShotSync → "Don't optimize". The direct-request dialog
+  (`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`) is not used because Google Play
+  restricts that permission. The foreground service already keeps
+  monitoring alive under Doze. Some manufacturers still kill the process
+  when the screen is off, which is what the exemption guards against.
 - **Manufacturer-specific battery settings**: MIUI, EMUI, ColorOS, One UI
   and others have their own background restrictions ("auto-start",
   "protected apps", "unrestricted battery"). See troubleshooting.md.
@@ -58,6 +67,16 @@ background. ShotSync restarts monitoring in three foreground-allowed ways:
   for missed screenshots").
 - **IS_PENDING**: files that are still being written are skipped and picked
   up on the next pass; the observer waits up to 30s for completion.
+
+## Edge-to-edge, backup, network config
+
+- targetSdk 36 enforces edge-to-edge; `MainActivity` calls
+  `enableEdgeToEdge()` and pads content to `safeDrawing` insets.
+- `allowBackup=false` plus `data_extraction_rules.xml`: nothing goes to
+  Google cloud backup or device-to-device transfer (tokens are Keystore-bound).
+- `network_security_config.xml`: no cleartext; system CAs only. The Mac's
+  self-signed certificate is pinned at runtime by `PinningTrustManager`
+  (its fingerprint is only known after pairing).
 
 ## Notifications
 
