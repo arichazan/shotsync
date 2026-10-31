@@ -24,3 +24,11 @@ android/.kotlin/
 
 # General
 *.tmp
+
+# Keystores / signing material (never commit)
+*.jks
+*.keystore
+*.p12
+*.p8
+*.mobileprovision
+/dist/
