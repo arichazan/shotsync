@@ -15,8 +15,8 @@ jobs:
   test-linux:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: mac/go.mod
           cache-dependency-path: mac/go.sum
@@ -27,8 +27,8 @@ jobs:
   build-macos:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: mac/go.mod
           cache-dependency-path: mac/go.sum
@@ -39,7 +39,7 @@ jobs:
         run: ./scripts/integration_test.sh
       - name: universal release build (unsigned; see docs/release-mac.md)
         run: ./scripts/release_mac.sh 0.0.0-ci
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: shotsync-darwin-universal
           path: dist/*.tar.gz*
