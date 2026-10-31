@@ -35,6 +35,11 @@ jobs:
       - name: vet + test (darwin)
         working-directory: mac
         run: go vet ./... && go test -count=1 ./...
+      - name: native Keychain backend must run (not skip)
+        working-directory: mac
+        run: |
+          go test -count=1 -v -run TestNativeRoundTrip ./internal/keychain/ | tee keychain-test.log
+          grep -q -- "--- PASS: TestNativeRoundTrip" keychain-test.log
       - name: integration test
         run: ./scripts/integration_test.sh
       - name: universal release build (unsigned; see docs/release-mac.md)
