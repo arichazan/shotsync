@@ -2,7 +2,7 @@ name: android
 
 on:
   push:
-    branches: [production-ready, main]
+    branches: [production-ready, main, "ci-scratch/**"]
     paths: ["android/**", ".github/workflows/android.yml"]
   pull_request:
     paths: ["android/**", ".github/workflows/android.yml"]

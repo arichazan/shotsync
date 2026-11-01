@@ -16,9 +16,9 @@ import (
 	"strings"
 	"time"
 
-	"example.com/shotsync/mac/internal/config"
-	"example.com/shotsync/mac/internal/install"
 	"fyne.io/systray"
+	"github.com/arichazan/shotsync/mac/internal/config"
+	"github.com/arichazan/shotsync/mac/internal/install"
 )
 
 type statusInfo struct {
@@ -67,6 +67,8 @@ func onReady() {
 	nameItem := settingsItem.AddSubMenuItem("Set Receiver Name…", "Choose the name shown during pairing")
 	advancedItem := settingsItem.AddSubMenuItem("Edit Advanced Configuration…", "Open the receiver configuration file")
 	logsItem := systray.AddMenuItem("View Logs", "")
+	systray.AddSeparator()
+	loginItem := systray.AddMenuItemCheckbox("Open Menu at Login", "Show this menu-bar app when you log in", install.LoginItemEnabled())
 	systray.AddSeparator()
 	quitItem := systray.AddMenuItem("Quit ShotSync", "")
 
@@ -195,6 +197,21 @@ func onReady() {
 				continue
 			}
 			_ = exec.Command("open", "-e", p.Log).Start()
+		}
+	}()
+
+	go func() {
+		for range loginItem.ClickedCh {
+			if loginItem.Checked() {
+				if install.DisableLoginItem() == nil {
+					loginItem.Uncheck()
+				}
+				continue
+			}
+			exe, err := menuExecutable()
+			if err == nil && install.EnableLoginItem(exe) == nil {
+				loginItem.Check()
+			}
 		}
 	}()
 

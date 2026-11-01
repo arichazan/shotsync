@@ -1,4 +1,4 @@
-module example.com/shotsync/mac
+module github.com/arichazan/shotsync/mac
 
 go 1.26
 

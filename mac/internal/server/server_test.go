@@ -18,9 +18,9 @@ import (
 	"testing"
 	"time"
 
-	"example.com/shotsync/mac/internal/config"
-	"example.com/shotsync/mac/internal/identity"
-	"example.com/shotsync/mac/internal/store"
+	"github.com/arichazan/shotsync/mac/internal/config"
+	"github.com/arichazan/shotsync/mac/internal/identity"
+	"github.com/arichazan/shotsync/mac/internal/store"
 )
 
 type memTokens struct {

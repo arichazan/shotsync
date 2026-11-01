@@ -81,6 +81,33 @@ the destination folder, set the receiver display name, show a pairing QR code,
 pause receiving, edit advanced preferences, view logs, and quit. The receiver itself runs independently of
 the menu app (via launchd) — quitting the menu app does not stop receiving.
 
+### ShotSync.app
+
+Release builds include `ShotSync.app`, which wraps the same binary. Drag it
+to `/Applications` and open it: the menu appears in the menu bar with no
+Dock icon (`LSUIElement`). The app does not install the receiver. Run
+`shotsync install --destination …` once (from Homebrew or the release
+tarball) for that.
+
+### Open the menu at login (opt-in, off by default)
+
+Check **Open Menu at Login** in the menu, or use the CLI:
+
+```bash
+shotsync login-item enable    # or: /Applications/ShotSync.app/Contents/MacOS/shotsync login-item enable
+shotsync login-item status
+shotsync login-item disable
+```
+
+`enable` writes a per-user launchd agent,
+`~/Library/LaunchAgents/com.shotsync.menu.plist`, which runs
+`<this binary> menu` at login (`RunAtLoad`, no `KeepAlive`, Aqua sessions
+only). It does not start a second copy right away. `disable` deletes the file,
+and a menu that is already running stays open until you quit it. Run
+`enable` from the copy you want launched, normally the one inside
+`ShotSync.app`. The receiver's own agent (`com.shotsync.receiver`) is separate
+and is not affected. `shotsync uninstall` also removes the menu login item.
+
 ## Uninstall
 
 ```bash

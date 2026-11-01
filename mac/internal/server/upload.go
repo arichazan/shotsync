@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"example.com/shotsync/mac/internal/store"
+	"github.com/arichazan/shotsync/mac/internal/store"
 )
 
 var (

@@ -9,7 +9,9 @@ release signing, no macOS release packaging, no privacy policy, a
 Play-restricted permission, a silent Android 14 partial-photo-access
 failure, and an unpadded edge-to-edge UI on Android 15+.
 
-**After: 7.5/10.** CI builds and tests both halves. Release APK/AAB signing
+**After round 1: 7.5/10.** **After polish round 2: 8/10.** Mac tokens no
+longer touch argv, and the menu bar now ships as a real `.app` with an opt-in
+login item. Round 1 summary: CI builds and tests both halves. Release APK/AAB signing
 is wired to secrets. Universal macOS builds and a Homebrew formula are
 scripted. The Play compliance issues are fixed, and the privacy policy, Data
 Safety sheet and listing are drafted. What remains is owner-only work
@@ -82,6 +84,49 @@ Safety sheet and listing are drafted. What remains is owner-only work
 `docs/play-store/closed-testing.md`, `docs/release-mac.md`, and updates to
 `docs/android-platform-notes.md` and `docs/build-android.md`.
 
+## Polish round 2
+
+What changed:
+- **Go module path** renamed to `github.com/arichazan/shotsync/mac` in
+  `go.mod` and all imports. Scripts and docs had no references to the old path.
+- **Mac token storage**: `internal/keychain` now uses the Security framework
+  via cgo on `darwin && cgo` (`SecItemUpdate`/`SecItemAdd`,
+  `SecItemCopyMatching` with prompts suppressed, `SecItemDelete`), so a token
+  is never passed on a command line. Non-darwin and `CGO_ENABLED=0` builds
+  keep the 0600 `tokens.json` fallback, which tests can force. Items written
+  by the old `security` CLI path are read once (the secret travels only over
+  stdout) and re-written natively.
+- **ShotSync.app**: `release_mac.sh` builds a bundle with an `LSUIElement`
+  `Info.plist` (`mac/packaging/Info.plist`) and a generated `.icns`
+  (`mac/cmd/mkicon` + `iconutil`). It signs, notarizes and staples the bundle
+  when credentials exist, and ad-hoc signs it otherwise. The tarball now
+  contains the app, and `ShotSync-<ver>.app.zip` ships beside it. Launched
+  from a bundle with no arguments, the binary runs the menu.
+- **Login item (opt-in)**: `shotsync login-item enable|disable|status` and an
+  "Open Menu at Login" menu checkbox write or remove
+  `~/Library/LaunchAgents/com.shotsync.menu.plist`. `uninstall` removes it
+  too. This is documented in `docs/install-mac.md` and `docs/release-mac.md`.
+- **Android**: added about 20 JVM tests covering exact backoff values,
+  jitter bounds, the full queue lifecycle, crash recovery and uploadability
+  for every status, and classifier edge cases (trailing slashes, casing,
+  custom folders). Two `RetryPolicy` fixes: its comment said "doubling" but
+  the code squares the attempt count (the comment now matches the code), and
+  very large attempt counts could overflow `Long` (the count is now clamped).
+  Robolectric was skipped: the pure logic needed no Android runtime.
+
+Verification:
+- Local: `scripts/run_all_tests.sh` passes (Go vet and tests including the
+  new install/login-item/mkicon tests, and the integration test). The
+  darwin keychain file also vets with `GOOS=darwin CGO_ENABLED=0`.
+- CI on macOS runs `TestNativeRoundTrip` against the real login Keychain and
+  fails if the test is skipped. It also verifies the bundle: plist lint,
+  `LSUIElement`, icon, both architectures, `codesign --verify`, and that the
+  login-item plist is created and lints.
+- CI mac-receiver, success, including the native Keychain step and bundle
+  verification: https://github.com/arichazan/shotsync/actions/runs/41245282194
+- CI android, success (unit tests + release APK/AAB):
+  https://github.com/arichazan/shotsync/actions/runs/41245254201
+
 ## 3. Remaining blockers
 
 ### Owner must do
@@ -122,14 +167,11 @@ Safety sheet and listing are drafted. What remains is owner-only work
   - battery-settings screen on OEM skins
   - edge-to-edge layout in the Settings overlay and dialogs
 - Instrumented/UI tests (only JVM unit tests exist).
-- The Go module path is `example.com/shotsync/mac`. Consider renaming it to
-  `github.com/arichazan/shotsync/mac` before others import it (cosmetic for
-  binaries).
-- The Mac stores tokens via `security add-generic-password -w <token>`, which
-  briefly exposes the token in the process list to the same user. Consider
-  the Security framework via cgo.
-- The menu bar runs as `shotsync menu`, with no `.app` bundle or login item
-  for it yet.
+- Manually check `ShotSync.app` and the "Open Menu at Login" item on a real
+  Mac after a reboot. CI checks the bundle's structure and signature but
+  cannot log in to a GUI session.
+- Robolectric or instrumented tests for the Room DAO and `SyncEngine`
+  (the pure logic is covered by JVM tests).
 - The CI mac job does not sign. Add certificate import from secrets when the
   certificates exist.
 

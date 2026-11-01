@@ -1,22 +1,31 @@
-// Package keychain stores device access tokens in the macOS login Keychain
-// via the `security` CLI, falling back to an owner-only (0600) JSON file in
-// the support directory only when the Keychain CLI is unavailable (e.g.
-// headless Linux test environments). On macOS the Keychain is always used.
+// Package keychain stores device access tokens.
+//
+// On macOS (darwin with cgo) tokens live in the login Keychain as generic
+// passwords, written and read through the Security framework
+// (SecItemAdd/SecItemUpdate/SecItemCopyMatching/SecItemDelete), so a token
+// never appears on a command line or in the process list.
+//
+// Everywhere else (Linux test environments, CGO_ENABLED=0 builds) tokens
+// fall back to an owner-only (0600) JSON file in the support directory.
 package keychain
 
 import (
 	"encoding/json"
 	"errors"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strings"
 	"sync"
 
-	"example.com/shotsync/mac/internal/config"
+	"github.com/arichazan/shotsync/mac/internal/config"
 )
 
-const service = "com.shotsync.receiver"
+// service is the Keychain service name. Tests override it so they never
+// touch real receiver items.
+var service = "com.shotsync.receiver"
+
+// forceFile makes the package use the file fallback even when a native
+// Keychain backend exists. Test-only.
+var forceFile = false
 
 var cache = struct {
 	sync.Mutex
@@ -33,14 +42,7 @@ func Set(account, token string) error {
 	if !Available() {
 		return fileUpdate(func(m map[string]string) { m[account] = token })
 	}
-	cmd := exec.Command("security", "delete-generic-password", "-s", service, "-a", account)
-	_ = cmd.Run() // ignore absence
-	add := exec.Command("security", "add-generic-password",
-		"-s", service, "-a", account, "-w", token, "-U")
-	if err := add.Run(); err != nil {
-		return err
-	}
-	return nil
+	return nativeSet(service, account, token)
 }
 
 // Get retrieves a token for a device, consulting the in-memory cache first.
@@ -59,11 +61,10 @@ func Get(account string) (string, bool) {
 		t, ok := m[account]
 		return t, ok
 	}
-	out, err := exec.Command("security", "find-generic-password", "-s", service, "-a", account, "-w").Output()
-	if err != nil {
+	token, ok := nativeGet(service, account)
+	if !ok {
 		return "", false
 	}
-	token := strings.TrimRight(string(out), "\n")
 	cache.Lock()
 	cache.tokens[account] = token
 	cache.Unlock()
@@ -79,19 +80,11 @@ func Delete(account string) {
 		_ = fileUpdate(func(m map[string]string) { delete(m, account) })
 		return
 	}
-	_ = exec.Command("security", "delete-generic-password", "-s", service, "-a", account).Run()
+	nativeDelete(service, account)
 }
 
-var availableOnce = sync.OnceValue(func() bool {
-	if _, err := exec.LookPath("security"); err != nil {
-		return false
-	}
-	// A generic lookup that must not leak anything; exit code only.
-	return exec.Command("security", "list-keychains").Run() == nil
-})
-
-// Available reports whether the Keychain CLI is usable (checked once).
-func Available() bool { return availableOnce() }
+// Available reports whether the native Keychain backend is in use.
+func Available() bool { return !forceFile && nativeAvailable }
 
 var fileMu sync.Mutex
 

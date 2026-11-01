@@ -2,7 +2,7 @@ name: mac-receiver
 
 on:
   push:
-    branches: [production-ready, main]
+    branches: [production-ready, main, "ci-scratch/**"]
     paths: ["mac/**", "scripts/**", "homebrew/**", ".github/workflows/mac.yml"]
   pull_request:
     paths: ["mac/**", "scripts/**", "homebrew/**", ".github/workflows/mac.yml"]
@@ -35,11 +35,33 @@ jobs:
       - name: vet + test (darwin)
         working-directory: mac
         run: go vet ./... && go test -count=1 ./...
+      - name: native Keychain backend must run (not skip)
+        working-directory: mac
+        run: |
+          go test -count=1 -v -run TestNativeRoundTrip ./internal/keychain/ | tee keychain-test.log
+          grep -q -- "--- PASS: TestNativeRoundTrip" keychain-test.log
       - name: integration test
         run: ./scripts/integration_test.sh
       - name: universal release build (unsigned; see docs/release-mac.md)
         run: ./scripts/release_mac.sh 0.0.0-ci
+      - name: verify ShotSync.app bundle
+        run: |
+          APP=dist/shotsync-0.0.0-ci/ShotSync.app
+          plutil -lint "$APP/Contents/Info.plist"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :LSUIElement' "$APP/Contents/Info.plist")" = true
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")" = 0.0.0-ci
+          test -s "$APP/Contents/Resources/ShotSync.icns"
+          lipo -info "$APP/Contents/MacOS/shotsync" | grep -q x86_64
+          lipo -info "$APP/Contents/MacOS/shotsync" | grep -q arm64
+          "$APP/Contents/MacOS/shotsync" version
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          H=$(mktemp -d)
+          HOME=$H "$APP/Contents/MacOS/shotsync" login-item enable
+          plutil -lint "$H/Library/LaunchAgents/com.shotsync.menu.plist"
+          test "$(HOME=$H "$APP/Contents/MacOS/shotsync" login-item status)" = enabled
       - uses: actions/upload-artifact@v5
         with:
           name: shotsync-darwin-universal
-          path: dist/*.tar.gz*
+          path: |
+            dist/*.tar.gz*
+            dist/*.app.zip*
