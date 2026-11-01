@@ -2,7 +2,7 @@ name: mac-receiver
 
 on:
   push:
-    branches: [production-ready, main]
+    branches: [production-ready, main, "ci-scratch/**"]
     paths: ["mac/**", "scripts/**", "homebrew/**", ".github/workflows/mac.yml"]
   pull_request:
     paths: ["mac/**", "scripts/**", "homebrew/**", ".github/workflows/mac.yml"]
